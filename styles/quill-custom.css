@@ -1,0 +1,5 @@
+.quill-editor-resizable .ql-container {
+  min-height: 150px;
+  resize: vertical;
+  overflow: auto;
+}
