@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "Pashmina Palace - Authentic Pashmina Products",
   description:
     "Discover the finest collection of authentic Pashmina shawls, scarves, wraps, stoles, luxury wear, and carpets.",
-    generator: 'v0.dev'
+    
 }
 
 export default function RootLayout({
