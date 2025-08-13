@@ -8,7 +8,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { LayoutDashboard, Package, ShoppingBag, Users, Settings, Menu, LogOut, MessageSquare, Tag } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingBag, Users, Settings, Menu, LogOut, MessageSquareCode, MessageSquare, Tag } from "lucide-react"
 import toast from "react-hot-toast"
 
 const navigation = [
@@ -36,6 +36,11 @@ const navigation = [
     name: "Users",
     href: "/admin/users",
     icon: Users,
+  },
+  {
+    name: "Reviews",
+    href: "/admin/reviews",
+    icon: MessageSquareCode,
   },
   {
     name: "Messages",

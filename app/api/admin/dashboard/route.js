@@ -41,6 +41,64 @@ export async function GET(request) {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
 
+    // Get last month date range
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+
+    // Get yearly revenue data for chart (12 months of current year)
+    const startOfYear = new Date(now.getFullYear(), 0, 1)
+    const yearlyRevenueData = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startOfYear },
+          status: { $ne: "cancelled" },
+        },
+      },
+      {
+        $group: {
+          _id: { month: { $month: "$createdAt" } },
+          revenue: { $sum: "$totalAmount" },
+        },
+      },
+      { $sort: { "_id.month": 1 } },
+    ])
+
+    // Get monthly revenue data for chart (daily breakdown of current month)
+    const monthlyRevenueData = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+          status: { $ne: "cancelled" },
+        },
+      },
+      {
+        $group: {
+          _id: { day: { $dayOfMonth: "$createdAt" } },
+          revenue: { $sum: "$totalAmount" },
+        },
+      },
+      { $sort: { "_id.day": 1 } },
+    ])
+
+    // Format revenue data for chart
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    const revenueData = months.map((month, index) => {
+      const monthIndex = index + 1
+      const yearlyData = yearlyRevenueData.find((item) => item._id.month === monthIndex)
+
+      // For monthly data, we'll use an average daily revenue for the month
+      const monthlyAverage =
+        monthlyRevenueData.length > 0
+          ? monthlyRevenueData.reduce((sum, item) => sum + item.revenue, 0) / monthlyRevenueData.length
+          : 0
+
+      return {
+        month,
+        thisYear: yearlyData ? Math.round(yearlyData.revenue) : 0,
+        thisMonth: monthIndex === now.getMonth() + 1 ? Math.round(monthlyAverage) : 0,
+      }
+    })
+
     // Get basic statistics
     const [totalProducts, totalOrders, totalUsers, totalCategories, totalMessages, recentOrders] = await Promise.all([
       Product.countDocuments(),
@@ -72,6 +130,7 @@ export async function GET(request) {
       monthlyNewUsers,
       monthlyNewMessages,
       monthlyRevenueResult,
+      lastMonthRevenueResult,
     ] = await Promise.all([
       // Total products sold this month
       Order.aggregate([
@@ -116,10 +175,21 @@ export async function GET(request) {
         },
         { $group: { _id: null, total: { $sum: "$totalAmount" } } },
       ]),
+
+      Order.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+            status: { $ne: "cancelled" },
+          },
+        },
+        { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+      ]),
     ])
 
     const monthlyProductsSold = monthlyProductsSoldResult[0]?.totalSold || 0
     const monthlyRevenue = monthlyRevenueResult[0]?.total || 0
+    const lastMonthRevenue = lastMonthRevenueResult[0]?.total || 0
 
     console.log("Dashboard stats:", {
       totalProducts,
@@ -134,6 +204,7 @@ export async function GET(request) {
       monthlyNewUsers,
       monthlyNewMessages,
       monthlyRevenue,
+      lastMonthRevenue,
       recentOrdersCount: recentOrders.length,
     })
 
@@ -145,6 +216,7 @@ export async function GET(request) {
       totalCategories,
       totalMessages,
       totalRevenue,
+      lastMonthRevenue,
       monthlyStats: {
         productsSold: monthlyProductsSold,
         cancelledOrders: monthlyCancelledOrders,
@@ -154,6 +226,7 @@ export async function GET(request) {
         revenue: monthlyRevenue,
       },
       recentOrders,
+      revenueData,
     })
   } catch (error) {
     console.error("Dashboard error:", error)

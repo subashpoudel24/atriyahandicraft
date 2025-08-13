@@ -21,7 +21,10 @@ interface Order {
   status: string
   createdAt: string
   items: Array<{
-    product: { name: string; images: string[] }
+    product: {
+      name: string
+      images: Array<{ url: string; alt: string }>
+    }
     quantity: number
     price: number
   }>
@@ -32,6 +35,7 @@ export default function AdminOrdersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [statusFilter, setStatusFilter] = useState("all")
+  const [recentFilter, setRecentFilter] = useState("all")
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -48,7 +52,7 @@ export default function AdminOrdersPage() {
       return
     }
     fetchOrders()
-  }, [user, router, pagination.page, statusFilter])
+  }, [user, router, pagination.page, statusFilter, recentFilter])
 
   const fetchOrders = async () => {
     setIsLoading(true)
@@ -57,6 +61,7 @@ export default function AdminOrdersPage() {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
         ...(statusFilter !== "all" && { status: statusFilter }),
+        ...(recentFilter !== "all" && { recent: recentFilter }),
       })
 
       const response = await fetch(`/api/admin/orders?${params}`, {
@@ -169,6 +174,16 @@ export default function AdminOrdersPage() {
     }
   }
 
+  // Helper function to safely get product image URL
+  const getProductImageUrl = (images: Array<{ url: string; alt: string }>) => {
+    return images && images.length > 0 && images[0]?.url ? images[0].url : "/placeholder.svg?height=60&width=60"
+  }
+
+  // Helper function to safely get product image alt text
+  const getProductImageAlt = (images: Array<{ url: string; alt: string }>, productName: string) => {
+    return images && images.length > 0 && images[0]?.alt ? images[0].alt : productName
+  }
+
   if (!user || user.role !== "admin") {
     return null
   }
@@ -200,6 +215,21 @@ export default function AdminOrdersPage() {
                     <SelectItem value="shipped">Shipped</SelectItem>
                     <SelectItem value="delivered">Delivered</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-48">
+                <Select value={recentFilter} onValueChange={setRecentFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by recency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="last7days">Last 7 Days</SelectItem>
+                    <SelectItem value="last30days">Last 30 Days</SelectItem>
+                    <SelectItem value="last90days">Last 90 Days</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -363,10 +393,15 @@ export default function AdminOrdersPage() {
                                             key={index}
                                             className="flex items-center space-x-4 p-4 border rounded-lg"
                                           >
+                                            {/* Fixed image URL access to use proper object structure */}
                                             <img
-                                              src={item.product.images[0] || "/placeholder.svg?height=60&width=60"}
-                                              alt={item.product.name}
+                                              src={getProductImageUrl(item.product.images) || "/placeholder.svg"}
+                                              alt={getProductImageAlt(item.product.images, item.product.name)}
                                               className="w-16 h-16 object-cover rounded"
+                                              onError={(e) => {
+                                                const target = e.target as HTMLImageElement
+                                                target.src = "/placeholder.svg?height=60&width=60"
+                                              }}
                                             />
                                             <div className="flex-1">
                                               <h4 className="font-medium">{item.product.name}</h4>
