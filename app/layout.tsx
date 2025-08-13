@@ -9,7 +9,7 @@ import { Toaster } from "react-hot-toast"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Pashmina Palace - Authentic Pashmina Products",
+  title: "Atriya Handicraft",
   description:
     "Discover the finest collection of authentic Pashmina shawls, scarves, wraps, stoles, luxury wear, and carpets.",
     
